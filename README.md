@@ -4,6 +4,8 @@ Local-first prompt capture for Codex and Claude Code native hooks.
 
 `prompt-capture` records the user-submitted prompt part of AI CLI conversations, stores the data on your machine, generates Markdown archives, and serves a local Web UI for browsing/searching. It does not wrap your terminal session; capture is done through each tool's native hook system.
 
+![Prompt Capture Web UI](./assets/web-ui.png)
+
 中文文档: [README.zh-CN.md](./README.zh-CN.md)
 
 ## Status

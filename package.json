@@ -2,6 +2,14 @@
   "name": "prompt-capture",
   "version": "0.1.0",
   "description": "Local prompt capture for Codex and Claude Code native hooks.",
+  "homepage": "https://github.com/hekai753/prompt-capture#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hekai753/prompt-capture.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hekai753/prompt-capture/issues"
+  },
   "type": "module",
   "bin": {
     "prompt-capture": "./dist/src/cli/index.js"
@@ -17,6 +25,7 @@
   },
   "files": [
     "dist/src",
+    "assets",
     "README.md",
     "README.zh-CN.md"
   ],

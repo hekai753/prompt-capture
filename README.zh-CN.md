@@ -4,6 +4,8 @@
 
 `prompt-capture` 会记录 AI CLI 对话中用户提交的 prompt，将数据保存在本机，生成按项目和日期组织的 Markdown 归档，并提供一个本地 Web 界面用于浏览、搜索和修改配置。它不包装终端，也不接管 TUI 输入；采集入口只使用各工具自己的 Hook 机制。
 
+![Prompt Capture Web 界面](./assets/web-ui.png)
+
 English: [README.md](./README.md)
 
 ## 当前状态
