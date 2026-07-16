@@ -1,0 +1,7 @@
+{
+  "session_id": "claude-session-1",
+  "transcript_path": "/Users/example/.claude/projects/demo/session.jsonl",
+  "cwd": "/tmp/demo-project",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "Refactor this module with API_KEY=secret-value"
+}

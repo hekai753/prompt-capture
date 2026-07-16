@@ -1,0 +1,31 @@
+{
+  "name": "prompt-capture",
+  "version": "0.1.0",
+  "description": "Local prompt capture for Codex and Claude Code native hooks.",
+  "type": "module",
+  "bin": {
+    "prompt-capture": "./dist/src/cli/index.js"
+  },
+  "scripts": {
+    "build": "tsc && npm run copy-ui",
+    "copy-ui": "node scripts/copy-ui.mjs",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test dist/tests/*.test.js",
+    "pretest": "npm run build",
+    "prepack": "npm run build"
+  },
+  "files": [
+    "dist/src",
+    "README.md",
+    "README.zh-CN.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.2"
+  }
+}

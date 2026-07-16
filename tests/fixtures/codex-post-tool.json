@@ -1,0 +1,13 @@
+{
+  "hook_event_name": "PostToolUse",
+  "cwd": "/tmp/demo-project",
+  "session_id": "codex-session-1",
+  "thread_id": "codex-thread-1",
+  "turn_id": "codex-turn-1",
+  "tool_name": "Bash",
+  "tool_response": {
+    "exit_code": 0,
+    "output": "ok"
+  },
+  "tool_use_id": "tool-1"
+}

@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Prompt Capture</title>
+    <meta name="description" content="Local prompt archive browser for Codex and Claude Code." />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#events">跳到事件列表</a>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">local prompt archive</p>
+          <h1>Prompt Capture</h1>
+        </div>
+        <div class="actions">
+          <button id="refresh" type="button">刷新</button>
+          <button id="open-config" type="button">配置</button>
+          <button id="export" type="button" class="primary">导出 Markdown</button>
+        </div>
+      </header>
+
+      <section class="overview" aria-label="采集概览">
+        <div class="summary">
+          <article>
+            <span>事件</span>
+            <strong id="stat-events">0</strong>
+          </article>
+          <article>
+            <span>Prompt</span>
+            <strong id="stat-prompts">0</strong>
+          </article>
+          <article>
+            <span>项目</span>
+            <strong id="stat-projects">0</strong>
+          </article>
+          <article>
+            <span>当前筛选</span>
+            <strong id="stat-filtered">0</strong>
+          </article>
+          <article>
+            <span>活跃日期</span>
+            <strong id="stat-days">0</strong>
+          </article>
+          <article>
+            <span>今日 Prompt</span>
+            <strong id="stat-today">0</strong>
+          </article>
+          <article>
+            <span>工具事件</span>
+            <strong id="stat-tools">0</strong>
+          </article>
+          <article>
+            <span>会话</span>
+            <strong id="stat-sessions">0</strong>
+          </article>
+        </div>
+
+        <section class="activity-panel" aria-label="提交矩阵">
+          <div class="panel-head">
+            <div>
+              <h2>提交矩阵</h2>
+              <p id="activity-summary">等待加载</p>
+            </div>
+            <button id="clear-date" type="button">全部日期</button>
+          </div>
+          <div id="activity-grid" class="activity-grid"></div>
+        </section>
+      </section>
+
+      <section class="toolbar" aria-label="筛选条件">
+        <label>
+          <span>项目</span>
+          <select id="project"><option value="">全部项目</option></select>
+        </label>
+        <label>
+          <span>日期</span>
+          <div class="date-filter" id="date-filter">
+            <button id="date-toggle" type="button" aria-expanded="false" aria-controls="date-picker">全部日期</button>
+            <input id="date" type="hidden" />
+            <div id="date-picker" class="date-picker" hidden>
+              <div class="date-picker-head">
+                <button id="date-prev" type="button" aria-label="上个月">‹</button>
+                <strong id="date-title">-</strong>
+                <button id="date-next" type="button" aria-label="下个月">›</button>
+              </div>
+              <div class="date-weekdays" aria-hidden="true">
+                <span>日</span>
+                <span>一</span>
+                <span>二</span>
+                <span>三</span>
+                <span>四</span>
+                <span>五</span>
+                <span>六</span>
+              </div>
+              <div id="date-grid" class="date-grid"></div>
+            </div>
+          </div>
+        </label>
+        <label>
+          <span>工具</span>
+          <select id="source">
+            <option value="">全部工具</option>
+            <option value="claude-code">Claude Code</option>
+            <option value="codex">Codex</option>
+          </select>
+        </label>
+        <label>
+          <span>类型</span>
+          <select id="kind">
+            <option value="">全部类型</option>
+            <option value="user_prompt_submit">Prompts</option>
+            <option value="pre_tool_use">Pre Tool</option>
+            <option value="post_tool_use">Post Tool</option>
+            <option value="stop">Stop</option>
+            <option value="unknown">Unknown</option>
+          </select>
+        </label>
+        <label class="search">
+          <span>搜索</span>
+          <input id="query" type="search" placeholder="输入 prompt、项目、session 或工具名" />
+        </label>
+      </section>
+
+      <section class="workspace">
+        <aside class="panel event-panel" aria-label="事件列表">
+          <div class="panel-head">
+            <div>
+              <h2>事件</h2>
+              <p id="event-count">等待加载</p>
+            </div>
+          </div>
+          <div id="events" class="events" tabindex="-1"></div>
+        </aside>
+
+        <article id="detail" class="panel detail">
+          <div class="empty-state">
+            <h2>选择一条记录</h2>
+            <p>左侧列表会显示捕获到的用户输入、工具调用和停止事件。选择记录后可查看完整 prompt、元数据和同一会话内的相关事件。</p>
+          </div>
+        </article>
+      </section>
+
+      <div id="config-modal" class="modal" aria-hidden="true">
+        <div class="modal-backdrop" data-close-config></div>
+        <section class="panel settings modal-card" role="dialog" aria-modal="true" aria-labelledby="config-title">
+          <div class="panel-head">
+            <div>
+              <h2 id="config-title">配置</h2>
+              <p id="config-status">读取中</p>
+            </div>
+            <button id="close-config" type="button" aria-label="关闭配置">关闭</button>
+          </div>
+          <form id="config-form">
+            <label class="switch-row">
+              <span>
+                <strong>保存 raw payload</strong>
+                <small>默认关闭，仅用于排查 hook payload。</small>
+              </span>
+              <input id="rawPayloads" type="checkbox" />
+            </label>
+            <label>
+              <span>Markdown 生成</span>
+              <select id="markdownMode">
+                <option value="realtime">实时刷新</option>
+                <option value="manual">手动导出</option>
+              </select>
+            </label>
+            <div class="path-list">
+              <div>
+                <span>存储目录</span>
+                <code id="storageRoot">-</code>
+              </div>
+              <div>
+                <span>Markdown</span>
+                <code id="markdownDir">-</code>
+              </div>
+              <div>
+                <span>配置文件</span>
+                <code id="configPath">-</code>
+              </div>
+            </div>
+            <button id="save-config" type="submit" class="primary">保存配置</button>
+          </form>
+          <p id="export-status" class="status-line" aria-live="polite"></p>
+        </section>
+      </div>
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>
