@@ -1,6 +1,6 @@
 {
   "name": "prompt-capture",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Local prompt capture for Codex and Claude Code native hooks.",
   "homepage": "https://github.com/hekai753/prompt-capture#readme",
   "repository": {
