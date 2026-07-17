@@ -97,7 +97,15 @@ document.addEventListener("keydown", (event) => {
 });
 
 restoreFilters();
+registerServiceWorker();
 refreshAll();
+
+function registerServiceWorker() {
+  if (!("serviceWorker" in navigator)) return;
+  navigator.serviceWorker.register("/sw.js").catch(() => {
+    // PWA support is optional; the local UI should still work if registration fails.
+  });
+}
 
 async function refreshAll() {
   setListLoading();

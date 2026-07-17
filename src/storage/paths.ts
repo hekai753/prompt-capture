@@ -28,3 +28,11 @@ export function rawDir(root: string): string {
 export function markdownDir(root: string): string {
   return join(root, "md");
 }
+
+export function webStatePath(root: string): string {
+  return join(root, "web-server.json");
+}
+
+export function webLogPath(root: string): string {
+  return join(root, "web-server.log");
+}

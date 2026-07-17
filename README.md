@@ -139,7 +139,8 @@ prompt-capture install --target claude|codex|all [--scope global|project] [--eve
 prompt-capture uninstall --target claude|codex|all [--scope global|project] [--dry-run]
 prompt-capture ingest --source claude-code|codex [--home path] [--print-id]
 prompt-capture export-md [--home path]
-prompt-capture web [--home path] [--port 4873]
+prompt-capture web [--home path] [--port 4873] [--background]
+prompt-capture web status|stop [--home path]
 prompt-capture config get [--home path]
 prompt-capture config set rawPayloads true|false [--home path]
 prompt-capture config set markdownMode realtime|manual [--home path]
@@ -158,6 +159,18 @@ The Web UI is local-only and binds to `127.0.0.1`.
 ```bash
 prompt-capture web --port 4873
 ```
+
+Run it as a background process:
+
+```bash
+prompt-capture web --port 4873 --background
+prompt-capture web status
+prompt-capture web stop
+```
+
+Background mode writes `web-server.json` and `web-server.log` under the storage root. Status shows the URL, PID, and storage root in use.
+
+Chrome can install the Web UI as a standalone app from the address bar install button or the "Install Prompt Capture" menu item. This uses the local PWA manifest and service worker; the app still talks only to the local `127.0.0.1` service.
 
 Current Web UI features:
 
@@ -224,6 +237,7 @@ Or with `--home`:
 
 ```bash
 prompt-capture web --home /path/to/archive --port 4873
+prompt-capture web --home /path/to/archive status
 ```
 
 Current layout:

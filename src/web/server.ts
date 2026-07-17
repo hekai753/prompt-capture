@@ -10,10 +10,17 @@ import { getEvent, listEvents, listProjects, relatedEvents } from "../storage/sq
 
 const UI_DIR = fileURLToPath(new URL("../ui", import.meta.url));
 
-export async function startServer(root: string, port: number): Promise<void> {
+export async function startServer(root: string, port: number): Promise<Server> {
   const server = createPromptCaptureServer(root);
-  await new Promise<void>((resolve) => server.listen(port, "127.0.0.1", resolve));
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(port, "127.0.0.1", () => {
+      server.off("error", reject);
+      resolve();
+    });
+  });
   process.stdout.write(`prompt-capture web: http://127.0.0.1:${port}\n`);
+  return server;
 }
 
 export function createPromptCaptureServer(root: string): Server {
@@ -22,6 +29,9 @@ export function createPromptCaptureServer(root: string): Server {
       const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
       if (url.pathname === "/api/projects") {
         return json(res, await listProjects(root));
+      }
+      if (url.pathname === "/api/health") {
+        return json(res, { ok: true });
       }
       if (url.pathname === "/api/config") {
         if (req.method === "GET") {
@@ -151,6 +161,12 @@ function contentType(file: string): string {
       return "text/css; charset=utf-8";
     case ".js":
       return "text/javascript; charset=utf-8";
+    case ".json":
+      return "application/json; charset=utf-8";
+    case ".webmanifest":
+      return "application/manifest+json; charset=utf-8";
+    case ".svg":
+      return "image/svg+xml; charset=utf-8";
     default:
       return "application/octet-stream";
   }

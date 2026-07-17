@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Prompt Capture">
+  <rect width="512" height="512" rx="92" fill="#2f6f63"/>
+  <rect x="96" y="120" width="320" height="272" rx="34" fill="#fbfcfb"/>
+  <path d="M150 206h116v34H150zM150 272h212v34H150z" fill="#2f6f63"/>
+  <path d="M320 205l48 51-48 51-24-22 27-29-27-29z" fill="#182026"/>
+</svg>

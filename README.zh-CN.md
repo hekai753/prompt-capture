@@ -139,7 +139,8 @@ prompt-capture install --target claude|codex|all [--scope global|project] [--eve
 prompt-capture uninstall --target claude|codex|all [--scope global|project] [--dry-run]
 prompt-capture ingest --source claude-code|codex [--home path] [--print-id]
 prompt-capture export-md [--home path]
-prompt-capture web [--home path] [--port 4873]
+prompt-capture web [--home path] [--port 4873] [--background]
+prompt-capture web status|stop [--home path]
 prompt-capture config get [--home path]
 prompt-capture config set rawPayloads true|false [--home path]
 prompt-capture config set markdownMode realtime|manual [--home path]
@@ -158,6 +159,18 @@ Web UI 只绑定本机 `127.0.0.1`：
 ```bash
 prompt-capture web --port 4873
 ```
+
+后台常驻启动：
+
+```bash
+prompt-capture web --port 4873 --background
+prompt-capture web status
+prompt-capture web stop
+```
+
+后台模式会在存储目录写入 `web-server.json` 和 `web-server.log`，状态检查会显示 URL、PID 和使用的存储目录。
+
+Chrome 打开 Web UI 后可通过地址栏右侧的安装按钮或菜单里的“安装 Prompt Capture”保存为独立应用窗口。该功能由本地 PWA manifest 和 service worker 提供，仍然只访问 `127.0.0.1` 上的本机服务。
 
 当前 Web UI 功能：
 
@@ -224,6 +237,7 @@ PROMPT_CAPTURE_HOME=/path/to/archive prompt-capture web
 
 ```bash
 prompt-capture web --home /path/to/archive --port 4873
+prompt-capture web --home /path/to/archive status
 ```
 
 当前目录结构：
