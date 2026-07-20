@@ -314,7 +314,7 @@ pre {
 
 .toolbar {
   position: relative;
-  z-index: 20;
+  z-index: 2;
   display: grid;
   grid-template-columns: minmax(11rem, 1.1fr) 10rem 10rem 10rem minmax(18rem, 2fr);
   gap: 0.75rem;
@@ -500,9 +500,13 @@ pre {
 }
 
 .detail-head h2 {
-  font-size: clamp(1.35rem, 2vw, 2rem);
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 1.35rem;
   line-height: 1.15;
   overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .meta-grid {
@@ -527,6 +531,61 @@ pre {
   border-top: 1px solid var(--line);
   padding-top: 1rem;
   margin-top: 1rem;
+}
+
+.copy-grid {
+  display: grid;
+  gap: 0.55rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.copy-card {
+  display: grid;
+  gap: 0.55rem;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #ffffff;
+  padding: 0.75rem;
+}
+
+.copy-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.copy-card-head strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.copy-card code {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  border-radius: 6px;
+  background: var(--panel-soft);
+  padding: 0.65rem;
+}
+
+.copy-card pre {
+  max-height: 26rem;
+}
+
+.copy-button {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 0.35rem 0.62rem;
+  color: var(--accent-dark);
+  font-size: 0.78rem;
+  font-weight: 700;
 }
 
 .related-list {
@@ -556,7 +615,7 @@ pre {
 .modal {
   position: fixed;
   inset: 0;
-  z-index: 10;
+  z-index: 100;
   display: none;
   place-items: center;
   padding: 1rem;
@@ -732,7 +791,8 @@ pre {
   }
 
   .related-item,
-  .meta-grid {
+  .meta-grid,
+  .copy-grid {
     grid-template-columns: 1fr;
   }
 }

@@ -48,6 +48,54 @@ Questions to answer:
 
 <!-- What reviewers should check -->
 
+## Scenario: Modal And Local Overlay Stacking
+
+### 1. Scope / Trigger
+- Trigger: changes to `src/ui/styles.css` that add or modify modals, toolbars, date pickers, dropdowns, or other positioned overlays.
+- The Web UI uses local stacking contexts for toolbar/date picker controls and a full-screen config modal.
+
+### 2. Signatures
+- Toolbar selector: `.toolbar`
+- Date picker selector: `.date-picker`
+- Full-screen modal selector: `.modal`
+
+### 3. Contracts
+- `.modal` must render above every in-page overlay while open.
+- Local overlays such as `.toolbar` and `.date-picker` may use z-index only within the page content layer.
+- Modal backdrop and modal card must not be partially obscured by filters, toolbars, event panels, or detail panels.
+
+### 4. Validation & Error Matrix
+- Open config modal while toolbar is visible -> modal and backdrop cover the toolbar.
+- Open date picker while modal is closed -> date picker appears above surrounding panels.
+- Open modal after date picker was used -> modal still wins the stacking order.
+
+### 5. Good/Base/Bad Cases
+- Good: `.modal` uses a higher z-index than `.toolbar` and `.date-picker`.
+- Base: local date picker remains above panels without competing with global modal.
+- Bad: toolbar z-index is higher than modal z-index, causing controls to appear over the modal.
+
+### 6. Tests Required
+- Manual browser smoke should open the config modal from the top toolbar and verify the toolbar is dimmed behind the backdrop.
+- For layout fixes, verify at desktop width and mobile/narrow width if the affected selector participates in responsive rules.
+
+### 7. Wrong vs Correct
+#### Wrong
+```css
+.toolbar { z-index: 20; }
+.modal { z-index: 10; }
+```
+
+The toolbar can paint above the modal backdrop.
+
+#### Correct
+```css
+.toolbar { z-index: 2; }
+.date-picker { z-index: 40; }
+.modal { z-index: 100; }
+```
+
+Local overlays stay above panels, and global modal overlays stay above local controls.
+
 ## Scenario: Chrome-installable Local Web UI
 
 ### 1. Scope / Trigger

@@ -271,8 +271,13 @@ function detailContent(event, related) {
   addMeta(meta, "Raw event", event.rawEventName);
   fragment.append(meta);
 
+  const commands = commandCopyItems(event);
+  if (commands.length > 0) {
+    fragment.append(section("快捷命令", copyGrid(commands)));
+  }
+
   if (event.prompt) {
-    fragment.append(section("Prompt", pre(event.prompt)));
+    fragment.append(section("Prompt", copyCard("复制 Prompt", event.prompt, pre(event.prompt))));
   }
   if (event.toolName) {
     fragment.append(section("Tool", element("p", event.toolName)));
@@ -455,6 +460,60 @@ function section(title, child) {
   return block;
 }
 
+function copyGrid(items) {
+  const grid = document.createElement("div");
+  grid.className = "copy-grid";
+  for (const item of items) {
+    grid.append(copyCard(item.label, item.value, element("code", item.value)));
+  }
+  return grid;
+}
+
+function copyCard(label, value, child) {
+  const card = document.createElement("div");
+  card.className = "copy-card";
+
+  const head = document.createElement("div");
+  head.className = "copy-card-head";
+  head.append(element("strong", label), copyButton(value));
+
+  card.append(head, child);
+  return card;
+}
+
+function copyButton(value) {
+  const button = document.createElement("button");
+  button.className = "copy-button";
+  button.type = "button";
+  button.textContent = "复制";
+  button.addEventListener("click", async () => {
+    const copied = await copyText(value);
+    button.textContent = copied ? "已复制" : "复制失败";
+    window.setTimeout(() => {
+      button.textContent = "复制";
+    }, 1400);
+  });
+  return button;
+}
+
+async function copyText(value) {
+  try {
+    await navigator.clipboard.writeText(value);
+    return true;
+  } catch {
+    const textarea = document.createElement("textarea");
+    textarea.value = value;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.top = "-1000px";
+    document.body.append(textarea);
+    textarea.select();
+    const copied = document.execCommand("copy");
+    textarea.remove();
+    return copied;
+  }
+}
+
 function pre(value) {
   const item = document.createElement("pre");
   item.textContent = value;
@@ -561,7 +620,32 @@ function todayKey() {
 }
 
 function detailTitle(event) {
-  return event.prompt || event.toolName || event.kind;
+  if (event.kind === "user_prompt_submit") return promptSummary(event.prompt);
+  if (event.toolName) return event.toolName;
+  return labelKind(event.kind);
+}
+
+function promptSummary(prompt) {
+  const normalized = String(prompt || "").replace(/\s+/g, " ").trim();
+  if (!normalized) return "Prompt";
+  return normalized.length > 42 ? `${normalized.slice(0, 42)}...` : normalized;
+}
+
+function commandCopyItems(event) {
+  if (!event.sessionId) return [];
+  const commands = [];
+  if (event.source === "claude-code") {
+    commands.push(
+      { label: "Claude resume", value: `claude --resume ${event.sessionId}` },
+      { label: "Claude fork", value: `claude --resume ${event.sessionId} --fork-session` },
+    );
+  }
+  if (event.source === "codex") {
+    commands.push(
+      { label: "Codex resume", value: `codex resume ${event.sessionId}` },
+    );
+  }
+  return commands;
 }
 
 function labelKind(kind) {
