@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { CaptureEvent, CaptureEventKind } from "../adapters/types.js";
+import { localDate } from "../capture/project.js";
 import { sqlitePath } from "./paths.js";
 
 export type EventIndex = {
@@ -44,7 +45,7 @@ export async function listEvents(root: string, filter: {
   const query = filter.q?.toLowerCase();
   return index.events.filter((event) => {
     if (filter.project && event.projectSlug !== filter.project) return false;
-    if (filter.date && !event.capturedAt.startsWith(filter.date)) return false;
+    if (filter.date && localDate(event.capturedAt) !== filter.date) return false;
     if (filter.source && event.source !== filter.source) return false;
     if (filter.kind && event.kind !== filter.kind) return false;
     if (query) {

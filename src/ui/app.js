@@ -585,13 +585,20 @@ function countPromptsByDate() {
   return counts;
 }
 
+function localDateKey(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function recentDateKeys(days) {
   const dates = [];
-  const today = new Date(`${todayKey()}T00:00:00.000Z`);
+  const today = new Date();
   for (let offset = days - 1; offset >= 0; offset -= 1) {
     const date = new Date(today);
-    date.setUTCDate(today.getUTCDate() - offset);
-    dates.push(date.toISOString().slice(0, 10));
+    date.setDate(today.getDate() - offset);
+    dates.push(localDateKey(date));
   }
   return dates;
 }
@@ -612,11 +619,11 @@ function activityLevel(count, max) {
 }
 
 function dateKey(value) {
-  return String(value).slice(0, 10);
+  return localDateKey(new Date(value));
 }
 
 function todayKey() {
-  return new Date().toISOString().slice(0, 10);
+  return localDateKey(new Date());
 }
 
 function detailTitle(event) {

@@ -6,6 +6,7 @@ import { test } from "node:test";
 import { normalizeEvent } from "../src/capture/normalize.js";
 import { appendEvent, readAllEvents } from "../src/storage/jsonl.js";
 import { exportMarkdown, refreshMarkdownForEvent } from "../src/storage/markdown.js";
+import { localDate } from "../src/capture/project.js";
 import { upsertEvent, listEvents, listProjects } from "../src/storage/sqlite.js";
 
 test("persists event, indexes it, and exports markdown", async () => {
@@ -102,6 +103,31 @@ test("full markdown export ignores non-markdown files in output directories", as
 
   assert.equal(written.length, 1);
   assert.equal(await readFile(dsStore, "utf8"), "keep\n");
+});
+
+test("filters events by local-timezone date (not UTC slice)", async () => {
+  const root = await mkdtemp(join(tmpdir(), "prompt-capture-date-local-"));
+  const event = normalizeEvent("codex", JSON.stringify({
+    hook_event_name: "UserPromptSubmit",
+    cwd: "/tmp/demo-project",
+    session_id: "s1",
+    prompt: "tz check",
+  })).event;
+  // 固定到 UTC 17:30 —— 在 UTC+8 等东时区下本地日期会跨到次日,从而区分本地口径与 UTC 切片
+  event.capturedAt = "2026-07-21T17:30:00.000Z";
+  await upsertEvent(root, event);
+
+  const localKey = localDate(event.capturedAt);
+  const utcKey = event.capturedAt.slice(0, 10);
+
+  const hits = await listEvents(root, { date: localKey });
+  assert.deepEqual(hits.map((e) => e.id), [event.id]);
+
+  // 本地键与 UTC 切片不同时,用 UTC 切片过滤应匹配不到(证明已改为本地口径)
+  if (utcKey !== localKey) {
+    const misses = await listEvents(root, { date: utcKey });
+    assert.equal(misses.length, 0);
+  }
 });
 
 async function writeSentinel(path: string): Promise<void> {
