@@ -1,4 +1,4 @@
-const CACHE_NAME = "prompt-capture-ui-v1";
+const CACHE_NAME = "prompt-capture-ui-v7";
 const STATIC_ASSETS = [
   "/",
   "/index.html",

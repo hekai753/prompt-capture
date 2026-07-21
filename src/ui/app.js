@@ -25,6 +25,8 @@ const els = {
   configModal: document.querySelector("#config-modal"),
   clearDate: document.querySelector("#clear-date"),
   activityGrid: document.querySelector("#activity-grid"),
+  activityStats: document.querySelector("#activity-stats"),
+  activityLegend: document.querySelector("#activity-legend"),
   activitySummary: document.querySelector("#activity-summary"),
   events: document.querySelector("#events"),
   detail: document.querySelector("#detail"),
@@ -207,6 +209,53 @@ function renderActivityMatrix() {
     if (count === 0) cell.disabled = true;
     els.activityGrid.append(cell);
   }
+
+  renderActivityStats(promptCounts, total);
+  renderActivityLegend();
+}
+
+function renderActivityStats(promptCounts, total) {
+  if (!els.activityStats) return;
+  const todayCount = promptCounts.get(todayKey()) ?? 0;
+  const activeDays = promptCounts.size;
+  const avg = activeDays ? (total / activeDays).toFixed(1) : "0";
+  let streak = 0;
+  const cursor = new Date();
+  while ((promptCounts.get(localDateKey(cursor)) ?? 0) > 0) {
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  let busyDate = "";
+  let busyCount = 0;
+  for (const [date, count] of promptCounts) {
+    if (count > busyCount) { busyCount = count; busyDate = date; }
+  }
+  const rows = [
+    ["今日", String(todayCount)],
+    ["活跃日均", avg],
+    ["连续", streak > 0 ? `${streak} 天` : "—"],
+    ["最忙", busyDate ? `${busyDate.slice(5)} · ${busyCount}` : "—"],
+  ];
+  const fragment = document.createDocumentFragment();
+  for (const [label, value] of rows) {
+    const dt = document.createElement("dt");
+    dt.textContent = label;
+    const dd = document.createElement("dd");
+    dd.textContent = value;
+    fragment.append(dt, dd);
+  }
+  els.activityStats.replaceChildren(fragment);
+}
+
+function renderActivityLegend() {
+  if (!els.activityLegend) return;
+  els.activityLegend.replaceChildren(element("span", "少"));
+  for (const level of [0, 1, 2, 3, 4]) {
+    const swatch = document.createElement("span");
+    swatch.className = `activity-swatch level-${level}`;
+    els.activityLegend.append(swatch);
+  }
+  els.activityLegend.append(element("span", "多"));
 }
 
 function renderEvents() {
@@ -252,8 +301,7 @@ async function renderDetail(event) {
       fetchJson(`/api/events/${encodeURIComponent(event.id)}/conversation`).catch(() => ({ entries: [], reason: "对话加载失败" })),
     ]);
     els.detail.replaceChildren(detailContent(event, related, conversation));
-    const current = els.detail.querySelector(".conv-row.is-current");
-    if (current) current.scrollIntoView({ block: "center" });
+    centerConversationCurrent();
   } catch (error) {
     els.detail.append(errorBlock(error));
   }
@@ -315,6 +363,16 @@ function detailSkeleton(event) {
   wrapper.className = "detail-loading";
   wrapper.append(tag(event.kind), element("h2", detailTitle(event)), element("p", "正在读取关联事件..."));
   return wrapper;
+}
+
+function centerConversationCurrent() {
+  const conv = els.detail.querySelector(".conversation");
+  const current = conv?.querySelector(".conv-row.is-current");
+  if (!conv || !current) return;
+  const convRect = conv.getBoundingClientRect();
+  const rowRect = current.getBoundingClientRect();
+  // 只滚动对话容器本身,让当前轮在容器内居中,避免把整个页面拽到深处。
+  conv.scrollTop += rowRect.top - convRect.top - conv.clientHeight / 2 + rowRect.height / 2;
 }
 
 function conversationPanel(conversation) {
