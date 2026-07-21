@@ -1,0 +1,29 @@
+{
+  "id": "experience-and-conversation-view",
+  "name": "experience-and-conversation-view",
+  "title": "prompt-capture 体验与对话视图优化",
+  "description": "",
+  "status": "planning",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "hekai",
+  "assignee": "hekai",
+  "createdAt": "2026-07-21",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "07-21-local-timezone-unification",
+    "07-21-claude-conversation-view"
+  ],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {}
+}
