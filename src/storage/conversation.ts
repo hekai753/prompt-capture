@@ -1,4 +1,6 @@
-import { readFile, stat } from "node:fs/promises";
+import { readFile, readdir, stat } from "node:fs/promises";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { summarizeUnknown } from "../capture/object.js";
 
 export type ConversationToolUse = { name: string; inputSummary?: string };
@@ -165,4 +167,112 @@ function applyHighlight(entries: ConversationEntry[], prompt?: string): Conversa
 
 function isEnoent(err: unknown): boolean {
   return typeof err === "object" && err !== null && "code" in err && (err as { code?: unknown }).code === "ENOENT";
+}
+
+// ---- Codex:按 sessionId 定位 rollout 文件并解析 ----
+
+function codexHome(): string {
+  return process.env.CODEX_HOME || join(homedir(), ".codex");
+}
+
+export async function findCodexRollout(sessionId: string): Promise<string | undefined> {
+  if (!sessionId) return undefined;
+  const suffix = `${sessionId}.jsonl`;
+  for (const dir of ["sessions", "archived_sessions"]) {
+    const base = join(codexHome(), dir);
+    let entries: string[] = [];
+    try {
+      const result = await readdir(base, { recursive: true });
+      entries = result.map((entry) => (typeof entry === "string" ? entry : String(entry)));
+    } catch {
+      continue;
+    }
+    const hit = entries.find((entry) => entry.endsWith(suffix));
+    if (hit) return join(base, hit);
+  }
+  return undefined;
+}
+
+export async function readCodexConversation(
+  path: string,
+  opts?: { highlightPrompt?: string },
+): Promise<ConversationResult> {
+  const st = await safeStat(path);
+  if (!st) return { entries: [], reason: "Codex session 文件未找到" };
+  const cached = cache.get(path);
+  const entries =
+    cached && cached.mtimeMs === st.mtimeMs
+      ? cached.entries
+      : await loadCodexAndCache(path, st.mtimeMs);
+  return { entries: applyHighlight(entries, opts?.highlightPrompt) };
+}
+
+async function loadCodexAndCache(path: string, mtimeMs: number): Promise<ConversationEntry[]> {
+  const entries = await parseCodexRollout(path);
+  cache.set(path, { mtimeMs, entries });
+  return entries;
+}
+
+async function parseCodexRollout(path: string): Promise<ConversationEntry[]> {
+  let content: string;
+  try {
+    content = await readFile(path, "utf8");
+  } catch (err) {
+    if (isEnoent(err)) return [];
+    throw err;
+  }
+  const entries: ConversationEntry[] = [];
+  for (const line of content.split(/\r?\n/)) {
+    if (!line.trim()) continue;
+    let obj: unknown;
+    try {
+      obj = JSON.parse(line);
+    } catch {
+      continue;
+    }
+    const entry = codexToEntry(obj);
+    if (entry) entries.push(entry);
+  }
+  return entries;
+}
+
+function codexToEntry(value: unknown): ConversationEntry | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const obj = value as Record<string, unknown>;
+  if (obj.type !== "response_item") return undefined;
+  const payload = obj.payload;
+  if (!payload || typeof payload !== "object") return undefined;
+  const p = payload as Record<string, unknown>;
+  const role = p.role;
+  if (role !== "user" && role !== "assistant") return undefined;
+  const content = p.content;
+  if (!Array.isArray(content)) return undefined;
+  const entry: ConversationEntry = {
+    role: role as "user" | "assistant",
+    timestamp: typeof obj.timestamp === "string" ? obj.timestamp : undefined,
+  };
+  for (const block of content) {
+    ingestCodexBlock(entry, block);
+  }
+  return entry;
+}
+
+function ingestCodexBlock(entry: ConversationEntry, block: unknown): void {
+  if (!block || typeof block !== "object") return;
+  const b = block as Record<string, unknown>;
+  const btype = b.type;
+  if ((btype === "input_text" || btype === "output_text") && typeof b.text === "string") {
+    entry.text = entry.text ? `${entry.text}\n${b.text}` : b.text;
+  } else if (btype === "function_call") {
+    const name = typeof b.name === "string" ? b.name : "function_call";
+    entry.toolUses = entry.toolUses ?? [];
+    entry.toolUses.push({ name, inputSummary: summarizeUnknown(b.arguments) });
+  } else if (btype === "function_call_output") {
+    const summary = summarizeUnknown(b.output);
+    if (summary) {
+      entry.toolResultSummary = entry.toolResultSummary
+        ? `${entry.toolResultSummary}\n${summary}`
+        : summary;
+    }
+  }
 }

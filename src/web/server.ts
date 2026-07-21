@@ -6,7 +6,7 @@ import type { CaptureEventKind } from "../adapters/types.js";
 import { readConfig, writeConfig, type AppConfig } from "../storage/config.js";
 import { exportMarkdown } from "../storage/markdown.js";
 import { configPath, markdownDir } from "../storage/paths.js";
-import { readConversation } from "../storage/conversation.js";
+import { findCodexRollout, readCodexConversation, readConversation } from "../storage/conversation.js";
 import { getEvent, listEvents, listProjects, relatedEvents } from "../storage/sqlite.js";
 
 const UI_DIR = fileURLToPath(new URL("../ui", import.meta.url));
@@ -70,11 +70,18 @@ export function createPromptCaptureServer(root: string): Server {
         const id = decodeURIComponent(conversationMatch[1] ?? "");
         const event = await getEvent(root, id);
         if (!event) return notFound(res);
+        if (event.source === "codex") {
+          if (!event.sessionId) {
+            return json(res, { entries: [], reason: "该事件无 sessionId" });
+          }
+          const rollout = await findCodexRollout(event.sessionId);
+          if (!rollout) {
+            return json(res, { entries: [], reason: "未找到 Codex session 文件" });
+          }
+          return json(res, await readCodexConversation(rollout, { highlightPrompt: event.prompt }));
+        }
         if (!event.transcriptPath) {
-          return json(res, {
-            entries: [],
-            reason: "该来源未提供 transcript 路径(Codex 支持 forthcoming)",
-          });
+          return json(res, { entries: [], reason: "该来源未提供 transcript 路径" });
         }
         return json(res, await readConversation(event.transcriptPath, { highlightPrompt: event.prompt }));
       }

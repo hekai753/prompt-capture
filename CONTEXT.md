@@ -39,6 +39,9 @@ One round within a Session. Codex provides a `turnId`; Claude Code has no turn i
 The complete conversation JSONL file that the Capture Source (Claude Code) maintains for a Session — user, assistant, and tool messages interleaved. Written by the Source, not by prompt-capture.
 _Avoid_: event log, capture (it is not our data).
 
+**rollout (Codex)**:
+Codex's equivalent of a transcript: `~/.codex/{sessions,archived_sessions}/.../rollout-<ts>-<session-uuid>.jsonl`. Located by sessionId (the uuid is in the filename) because Codex hook payloads carry no path — unlike Claude Code's `transcriptPath`.
+
 **transcriptPath**:
 The absolute path to a Session's transcript, carried on each Capture Event from the hook payload.
 

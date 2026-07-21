@@ -27,7 +27,7 @@ Not implemented yet:
 
 - SQLite/FTS index for very large archives.
 - Cloud sync.
-- Assistant response body capture.
+- Assistant response body capture (on-demand conversation view is already supported for both Claude Code and Codex).
 - Wrapper / PTY terminal capture.
 
 ## Install
@@ -183,7 +183,7 @@ Current Web UI features:
 - Inline Markdown export status.
 - Config dialog for `rawPayloads` and `markdownMode`.
 - Read-only display of storage, Markdown, and config paths.
-- Claude Code conversation view: the detail view reads the session transcript on demand and renders the full user/assistant/tool timeline; copying the conversation runs secret redaction first.
+- Conversation view: the detail view reads the full session dialogue on demand — from the Claude Code transcript, or by locating the Codex session rollout file via sessionId — and renders the user/assistant/tool timeline; copying the conversation runs secret redaction first.
 
 ## Config
 
@@ -283,7 +283,7 @@ When `markdownMode` is `realtime`, ingestion refreshes only the current project/
 - Data stays local by default.
 - The default storage directory is under the user home directory, not the captured project.
 - Raw hook payloads are off by default.
-- Assistant responses are read on demand from Claude Code's transcript and shown in the conversation view; they are not ingested or persisted by prompt-capture. The local UI shows original values; copying conversation text runs redaction first.
+- Assistant responses are read on demand and shown in the conversation view (from the Claude Code transcript or the Codex session rollout); they are not ingested or persisted by prompt-capture. The local UI shows original values; copying conversation text runs redaction first.
 - Be careful before committing generated archives; prompts can contain secrets or proprietary context.
 
 ## Development

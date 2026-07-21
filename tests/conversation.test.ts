@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { test } from "node:test";
-import { parseConversation } from "../src/storage/conversation.js";
+import { findCodexRollout, parseConversation, readCodexConversation } from "../src/storage/conversation.js";
 
 const TRANSCRIPT = [
   `{"type":"mode","sessionId":"s1"}`,
@@ -72,4 +72,69 @@ test("returns empty reason when transcript has no displayable content", async ()
   const { entries, reason } = await parseConversation(path);
   assert.deepEqual(entries, []);
   assert.ok(reason?.includes("无可展示"));
+});
+
+const CODEX_ROLLOUT = [
+  `{"timestamp":"t0","type":"session_meta","payload":{"session_id":"s1"}}`,
+  `{"timestamp":"t1","type":"response_item","payload":{"role":"developer","content":[{"type":"input_text","text":"you are codex"}]}}`,
+  `{"timestamp":"t2","type":"response_item","payload":{"role":"user","content":[{"type":"input_text","text":"hello codex"}]}}`,
+  `{"timestamp":"t3","type":"response_item","payload":{"role":"assistant","content":[{"type":"output_text","text":"hi from codex"},{"type":"function_call","name":"shell","arguments":"{\\"cmd\\":\\"ls\\"}"}]}}`,
+  `{"timestamp":"t4","type":"response_item","payload":{"role":"user","content":[{"type":"function_call_output","call_id":"c1","output":"total 0"}]}}`,
+  `this line is not json`,
+  `{"timestamp":"t5","type":"event_msg","payload":{}}`,
+].join("\n");
+
+async function writeCodexRollout(): Promise<string> {
+  const dir = await mkdtemp(join(tmpdir(), "pc-codex-rollout-"));
+  const path = join(dir, "rollout.jsonl");
+  await writeFile(path, CODEX_ROLLOUT, "utf8");
+  return path;
+}
+
+test("parses codex rollout timeline and skips non-response_item rows", async () => {
+  const path = await writeCodexRollout();
+  const { entries, reason } = await readCodexConversation(path);
+  assert.equal(reason, undefined);
+  // developer 跳过;剩 user(hello) / assistant / user(tool_result)
+  assert.equal(entries.length, 3);
+  const [u, a, tr] = entries;
+  assert.equal(u.role, "user");
+  assert.equal(u.text, "hello codex");
+  assert.equal(a.role, "assistant");
+  assert.equal(a.text, "hi from codex");
+  assert.equal(a.toolUses?.length, 1);
+  assert.equal(a.toolUses?.[0]?.name, "shell");
+  assert.equal(tr.role, "user");
+  assert.ok(tr.toolResultSummary?.includes("total 0"));
+});
+
+test("codex highlight matches user input_text", async () => {
+  const path = await writeCodexRollout();
+  const matched = await readCodexConversation(path, { highlightPrompt: "hello codex" });
+  assert.equal(matched.entries[0]?.isCurrent, true);
+  assert.equal(matched.entries[1]?.isCurrent, undefined);
+});
+
+test("findCodexRollout locates file by sessionId in sessions and archived_sessions", async () => {
+  const home = await mkdtemp(join(tmpdir(), "pc-codex-home-"));
+  const prev = process.env.CODEX_HOME;
+  process.env.CODEX_HOME = home;
+  try {
+    const id = "0aaabbbb-cccc-4ddd-8eee-ffffffffffff";
+    const live = join(home, "sessions", "2026", "07", "21", `rollout-2026-07-21T00-00-00-${id}.jsonl`);
+    await mkdir(dirname(live), { recursive: true });
+    await writeFile(live, `{"type":"session_meta","payload":{}}\n`, "utf8");
+    assert.equal(await findCodexRollout(id), live);
+
+    const archived = join(home, "archived_sessions", "2026", "01", "01", `rollout-2026-01-01T00-00-00-${id}.jsonl`);
+    await mkdir(dirname(archived), { recursive: true });
+    await writeFile(archived, `{"type":"session_meta","payload":{}}\n`, "utf8");
+    await rm(live);
+    assert.equal(await findCodexRollout(id), archived);
+
+    assert.equal(await findCodexRollout("does-not-exist-id"), undefined);
+  } finally {
+    if (prev === undefined) delete process.env.CODEX_HOME;
+    else process.env.CODEX_HOME = prev;
+  }
 });
