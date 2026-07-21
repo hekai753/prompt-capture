@@ -796,3 +796,84 @@ pre {
     grid-template-columns: 1fr;
   }
 }
+
+.conversation {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.conversation-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.conv-row {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  gap: 0.6rem;
+  align-items: start;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #ffffff;
+  padding: 0.55rem 0.7rem;
+}
+
+.conv-row.conv-assistant {
+  background: var(--panel-soft);
+}
+
+.conv-row.is-current {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(47, 111, 99, 0.18);
+}
+
+.conv-role {
+  padding-top: 0.15rem;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.conv-row.conv-assistant .conv-role {
+  color: var(--accent-dark);
+}
+
+.conv-body {
+  display: grid;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.conv-body pre {
+  margin: 0;
+  max-height: 18rem;
+  padding: 0.65rem 0.8rem;
+  font-size: 0.82rem;
+}
+
+.conv-details > summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.conv-details pre {
+  margin-top: 0.4rem;
+  max-height: 16rem;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 820px) {
+  .conv-row {
+    grid-template-columns: 1fr;
+    gap: 0.3rem;
+  }
+}

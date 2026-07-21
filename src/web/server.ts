@@ -6,6 +6,7 @@ import type { CaptureEventKind } from "../adapters/types.js";
 import { readConfig, writeConfig, type AppConfig } from "../storage/config.js";
 import { exportMarkdown } from "../storage/markdown.js";
 import { configPath, markdownDir } from "../storage/paths.js";
+import { readConversation } from "../storage/conversation.js";
 import { getEvent, listEvents, listProjects, relatedEvents } from "../storage/sqlite.js";
 
 const UI_DIR = fileURLToPath(new URL("../ui", import.meta.url));
@@ -63,6 +64,19 @@ export function createPromptCaptureServer(root: string): Server {
       const relatedMatch = url.pathname.match(/^\/api\/events\/([^/]+)\/related$/);
       if (relatedMatch) {
         return json(res, await relatedEvents(root, decodeURIComponent(relatedMatch[1] ?? "")));
+      }
+      const conversationMatch = url.pathname.match(/^\/api\/events\/([^/]+)\/conversation$/);
+      if (conversationMatch) {
+        const id = decodeURIComponent(conversationMatch[1] ?? "");
+        const event = await getEvent(root, id);
+        if (!event) return notFound(res);
+        if (!event.transcriptPath) {
+          return json(res, {
+            entries: [],
+            reason: "该来源未提供 transcript 路径(Codex 支持 forthcoming)",
+          });
+        }
+        return json(res, await readConversation(event.transcriptPath, { highlightPrompt: event.prompt }));
       }
       if (url.pathname === "/api/export-md" && req.method === "POST") {
         return json(res, { written: await exportMarkdown(root) });

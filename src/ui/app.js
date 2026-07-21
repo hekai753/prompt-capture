@@ -247,14 +247,19 @@ async function renderDetail(event) {
   renderEvents();
   els.detail.replaceChildren(detailSkeleton(event));
   try {
-    const related = await fetchJson(`/api/events/${encodeURIComponent(event.id)}/related`);
-    els.detail.replaceChildren(detailContent(event, related));
+    const [related, conversation] = await Promise.all([
+      fetchJson(`/api/events/${encodeURIComponent(event.id)}/related`).catch(() => []),
+      fetchJson(`/api/events/${encodeURIComponent(event.id)}/conversation`).catch(() => ({ entries: [], reason: "对话加载失败" })),
+    ]);
+    els.detail.replaceChildren(detailContent(event, related, conversation));
+    const current = els.detail.querySelector(".conv-row.is-current");
+    if (current) current.scrollIntoView({ block: "center" });
   } catch (error) {
     els.detail.append(errorBlock(error));
   }
 }
 
-function detailContent(event, related) {
+function detailContent(event, related, conversation) {
   const fragment = document.createDocumentFragment();
   const header = document.createElement("div");
   header.className = "detail-head";
@@ -279,6 +284,7 @@ function detailContent(event, related) {
   if (event.prompt) {
     fragment.append(section("Prompt", copyCard("复制 Prompt", event.prompt, pre(event.prompt))));
   }
+  fragment.append(section("对话(本 session)", conversationPanel(conversation)));
   if (event.toolName) {
     fragment.append(section("Tool", element("p", event.toolName)));
   }
@@ -309,6 +315,85 @@ function detailSkeleton(event) {
   wrapper.className = "detail-loading";
   wrapper.append(tag(event.kind), element("h2", detailTitle(event)), element("p", "正在读取关联事件..."));
   return wrapper;
+}
+
+function conversationPanel(conversation) {
+  const wrap = document.createElement("div");
+  wrap.className = "conversation";
+  const entries = conversation?.entries ?? [];
+  if (entries.length === 0) {
+    wrap.append(emptyBlock("对话不可用", conversation?.reason || "未找到可展示的对话内容。"));
+    return wrap;
+  }
+  const head = document.createElement("div");
+  head.className = "conversation-head";
+  head.append(element("span", `本 session 共 ${entries.length} 条`), conversationCopyButton(entries));
+  wrap.append(head);
+  for (const entry of entries) {
+    wrap.append(conversationRow(entry));
+  }
+  return wrap;
+}
+
+function conversationRow(entry) {
+  const row = document.createElement("div");
+  row.className = `conv-row conv-${entry.role}${entry.isCurrent ? " is-current" : ""}`;
+  const role = document.createElement("span");
+  role.className = "conv-role";
+  role.textContent = entry.role === "assistant" ? "assistant" : "user";
+  const body = document.createElement("div");
+  body.className = "conv-body";
+  if (entry.text) body.append(pre(entry.text));
+  if (entry.thinking) body.append(detailsBlock("thinking", entry.thinking));
+  if (entry.toolUses && entry.toolUses.length > 0) {
+    body.append(detailsBlock("tool_use", entry.toolUses.map((t) => `${t.name}\n${t.inputSummary || ""}`).join("\n\n")));
+  }
+  if (entry.toolResultSummary) body.append(detailsBlock("tool_result", entry.toolResultSummary));
+  row.append(role, body);
+  return row;
+}
+
+function detailsBlock(title, content) {
+  const details = document.createElement("details");
+  details.className = "conv-details";
+  const summary = document.createElement("summary");
+  summary.textContent = title;
+  details.append(summary, pre(content));
+  return details;
+}
+
+function conversationCopyButton(entries) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "copy-button";
+  button.textContent = "复制对话(脱敏)";
+  button.addEventListener("click", async () => {
+    const text = entries.map((entry) => {
+      const parts = [
+        entry.text,
+        entry.thinking ? `[thinking]\n${entry.thinking}` : "",
+        ...(entry.toolUses || []).map((t) => `[tool_use:${t.name}] ${t.inputSummary || ""}`),
+        entry.toolResultSummary ? `[tool_result]\n${entry.toolResultSummary}` : "",
+      ].filter(Boolean);
+      return `[${entry.role}]\n${parts.join("\n")}`;
+    }).join("\n\n");
+    const safe = redactText(text);
+    const copied = await copyText(safe);
+    button.textContent = copied ? "已复制(脱敏)" : "复制失败";
+    window.setTimeout(() => { button.textContent = "复制对话(脱敏)"; }, 1400);
+  });
+  return button;
+}
+
+// 与 src/capture/redact.ts 保持同步:出口(复制/导出)脱敏,本地展示保持原文。
+const SECRET_PATTERNS = [
+  [/(bearer\s+)[A-Za-z0-9._~+/=-]{12,}/gi, "$1[REDACTED]"],
+  [/\b([A-Za-z0-9_]*(?:TOKEN|SECRET|PASSWORD|API_KEY|ACCESS_KEY)[A-Za-z0-9_]*\s*[:=]\s*)(["']?)[^"'\s]+/gi, "$1$2[REDACTED]"],
+  [/\b(sk-[A-Za-z0-9_-]{16,})\b/g, "[REDACTED_OPENAI_KEY]"],
+];
+
+function redactText(text) {
+  return SECRET_PATTERNS.reduce((current, [pattern, replacement]) => current.replace(pattern, replacement), text);
 }
 
 async function exportMarkdown() {
