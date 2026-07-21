@@ -1,0 +1,30 @@
+{
+  "id": "ux-infra-improvements",
+  "name": "ux-infra-improvements",
+  "title": "P1 体验与 Codex 对话与 SW 缓存优化",
+  "description": "本轮三项: P1 前端交互(键盘导航/搜索 debounce/URL 同步筛选)、Codex 对话视图(需先研究数据源)、SW 缓存策略优化(避免每次改 UI 都 bump 版本)",
+  "status": "planning",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "hekai",
+  "assignee": "hekai",
+  "createdAt": "2026-07-21",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "07-21-p1-keyboard-debounce-url",
+    "07-21-codex-conversation-view",
+    "07-21-sw-cache-strategy"
+  ],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {}
+}
