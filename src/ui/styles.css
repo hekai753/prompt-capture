@@ -313,6 +313,13 @@ pre {
   border-radius: 3px;
 }
 
+mark {
+  background: rgba(47, 111, 99, 0.22);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
 .activity-cell {
   width: 0.68rem;
   min-height: 0;

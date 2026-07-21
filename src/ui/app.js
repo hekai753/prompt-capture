@@ -50,12 +50,10 @@ const els = {
   configPath: document.querySelector("#configPath"),
 };
 
-for (const el of [els.project, els.date, els.source, els.kind, els.query]) {
-  el.addEventListener("input", () => {
-    persistFilters();
-    loadEvents();
-  });
+for (const el of [els.project, els.source, els.kind]) {
+  el.addEventListener("change", onFilterChange);
 }
+els.query.addEventListener("input", debounce(onFilterChange, 200));
 
 els.refresh.addEventListener("click", refreshAll);
 els.export.addEventListener("click", exportMarkdown);
@@ -91,14 +89,31 @@ document.addEventListener("click", (event) => {
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && els.configModal.classList.contains("is-open")) {
     closeConfigModal();
+    return;
   }
   if (event.key === "Escape" && !els.datePicker.hidden) {
     setDatePickerOpen(false);
     els.dateToggle.focus();
+    return;
+  }
+  if (isTypingTarget(event.target)) return;
+  if (event.key === "j" || event.key === "ArrowDown") {
+    event.preventDefault();
+    moveSelection(1);
+  } else if (event.key === "k" || event.key === "ArrowUp") {
+    event.preventDefault();
+    moveSelection(-1);
+  } else if (event.key === "/") {
+    event.preventDefault();
+    els.query.focus();
   }
 });
 
 restoreFilters();
+window.addEventListener("popstate", () => {
+  restoreFilters();
+  loadEvents();
+});
 registerServiceWorker();
 refreshAll();
 
@@ -276,10 +291,15 @@ function renderEvents() {
       ? event.prompt.replace(/\s+/g, " ").slice(0, 180)
       : event.toolResultSummary || event.projectPath;
 
+    const query = els.query.value.trim().toLowerCase();
+    const strong = document.createElement("strong");
+    appendHighlighted(strong, title.slice(0, 120), query);
+    const snippetEl = document.createElement("span");
+    appendHighlighted(snippetEl, snippet.slice(0, 220), query);
     button.append(
       tag(event.kind),
-      element("strong", title.slice(0, 120)),
-      element("span", snippet.slice(0, 220)),
+      strong,
+      snippetEl,
       metaRow([
         event.source,
         shortProject(event.projectSlug),
@@ -695,26 +715,102 @@ async function fetchJson(url, options) {
   return res.json();
 }
 
+function onFilterChange() {
+  persistFilters();
+  loadEvents();
+}
+
 function persistFilters() {
-  localStorage.setItem("prompt-capture-filters", JSON.stringify({
+  const filters = {
     project: els.project.value,
     date: els.date.value,
     source: els.source.value,
     kind: els.kind.value,
     query: els.query.value,
-  }));
+  };
+  localStorage.setItem("prompt-capture-filters", JSON.stringify(filters));
+  syncUrl(filters);
+}
+
+function syncUrl(filters) {
+  const params = new URLSearchParams();
+  if (filters.project) params.set("project", filters.project);
+  if (filters.date) params.set("date", filters.date);
+  if (filters.source) params.set("source", filters.source);
+  if (filters.kind) params.set("kind", filters.kind);
+  if (filters.query.trim()) params.set("q", filters.query.trim());
+  const search = params.toString();
+  const target = search ? `?${search}` : "";
+  if (location.search !== target) {
+    history.pushState(null, "", search ? `?${search}` : location.pathname);
+  }
 }
 
 function restoreFilters() {
-  try {
-    const filters = JSON.parse(localStorage.getItem("prompt-capture-filters") || "{}");
-    els.project.value = filters.project || "";
-    els.date.value = filters.date || "";
-    els.source.value = filters.source || "";
-    els.kind.value = filters.kind || "";
-    els.query.value = filters.query || "";
-  } catch {
-    localStorage.removeItem("prompt-capture-filters");
+  const params = new URLSearchParams(location.search);
+  const hasUrl = [...params.keys()].length > 0;
+  let filters;
+  if (hasUrl) {
+    filters = {
+      project: params.get("project") || "",
+      date: params.get("date") || "",
+      source: params.get("source") || "",
+      kind: params.get("kind") || "",
+      query: params.get("q") || "",
+    };
+  } else {
+    try {
+      filters = JSON.parse(localStorage.getItem("prompt-capture-filters") || "{}");
+    } catch {
+      localStorage.removeItem("prompt-capture-filters");
+      filters = {};
+    }
+  }
+  els.project.value = filters.project || "";
+  els.date.value = filters.date || "";
+  els.source.value = filters.source || "";
+  els.kind.value = filters.kind || "";
+  els.query.value = filters.query || "";
+}
+
+function moveSelection(delta) {
+  const list = [...state.events].reverse();
+  if (list.length === 0) return;
+  let idx = list.findIndex((event) => event.id === state.selectedId);
+  if (idx < 0) idx = delta > 0 ? -1 : list.length;
+  const next = list[idx + delta];
+  if (!next) return;
+  renderDetail(next);
+  const active = els.events.querySelector(".event.is-active");
+  if (active) active.scrollIntoView({ block: "nearest" });
+}
+
+function isTypingTarget(target) {
+  if (!(target instanceof Element)) return false;
+  const tag = target.tagName;
+  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target.isContentEditable;
+}
+
+function debounce(fn, ms) {
+  let timer = null;
+  return (...args) => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), ms);
+  };
+}
+
+function appendHighlighted(parent, text, query) {
+  if (!query) { parent.append(text); return; }
+  const lower = text.toLowerCase();
+  let i = 0;
+  while (i < text.length) {
+    const hit = lower.indexOf(query, i);
+    if (hit < 0) { parent.append(text.slice(i)); return; }
+    if (hit > i) parent.append(text.slice(i, hit));
+    const mark = document.createElement("mark");
+    mark.textContent = text.slice(hit, hit + query.length);
+    parent.append(mark);
+    i = hit + query.length;
   }
 }
 
